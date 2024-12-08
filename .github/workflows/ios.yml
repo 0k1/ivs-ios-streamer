@@ -1,0 +1,59 @@
+name: iOS Build
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    name: Build iOS App
+    runs-on: macos-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Setup Ruby
+      uses: ruby/setup-ruby@v1
+      with:
+        ruby-version: file: .ruby-version
+        bundler-cache: true
+
+    - name: Cache CocoaPods
+      uses: actions/cache@v3
+      with:
+        path: |
+          Pods
+          Common/Pods
+          BasicRealTime/Pods
+          RealTimePlayer/Pods
+        key: ${{ runner.os }}-pods-${{ hashFiles('**/Podfile.lock', '**/Gemfile.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-pods-
+
+    - name: Install Dependencies
+      run: |
+        bundle install
+        bundle exec pod install --repo-update
+
+    - name: Build BasicRealTime
+      run: |
+        xcodebuild clean build \
+          -workspace RealTimeSamples.xcworkspace \
+          -scheme BasicRealTime \
+          -destination 'platform=iOS Simulator,name=iPhone 14' \
+          CODE_SIGN_IDENTITY="" \
+          CODE_SIGNING_REQUIRED=NO \
+          CODE_SIGNING_ALLOWED=NO
+
+    - name: Build RealTimePlayer
+      run: |
+        xcodebuild clean build \
+          -workspace RealTimeSamples.xcworkspace \
+          -scheme RealTimePlayer \
+          -destination 'platform=iOS Simulator,name=iPhone 14' \
+          CODE_SIGN_IDENTITY="" \
+          CODE_SIGNING_REQUIRED=NO \
+          CODE_SIGNING_ALLOWED=NO
